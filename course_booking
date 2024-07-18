@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Booking and Cart</title>
+    <style>
+        body {
+            font-family: Antic;
+        }
+        .course, .cart {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .cart {
+            border-top: 2px solid #000;
+        }
+        .cart-items {
+            list-style: none;
+            padding: 0;
+        }
+        #date-picker {
+            display: none;
+        }
+    </style>
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- PayPal SDK -->
+    <script src="https://www.paypal.com/sdk/js?client-id=ENVMWf_xWOAeBYDaFJt47OmfxZcLhbotzxHB83167ZSJn2OBoxQOlSJTBdvp6fLFhyk46YCvj6M8MHAk"></script>
+</head>
+<body>
+    <div id="courses">
+        <h2>Presentation Literacy Solutions</h2>
+        <div class="course" data-id="speak-easy">
+            <h3>Speak-Easy</h3>
+            <p>Price: $695</p>
+            <button onclick="selectDate('speak-easy', 'Speak-Easy', 695)">Book Now</button>
+        </div>
+        <div class="course" data-id="z-speaks">
+            <h3>Z-Speaks</h3>
+            <p>Price: $695</p>
+            <button onclick="selectDate('z-speaks', 'Z-Speaks', 695)">Book Now</button>
+        </div>
+        <button onclick="bookAll()">Book All</button>
+    </div>
+
+    <div id="date-picker" class="course">
+        <h3>Select a Date</h3>
+        <input type="text" id="datepicker" placeholder="Select Date">
+        <button onclick="confirmDate()">Confirm Date</button>
+    </div>
+
+    <div id="cart-page" style="display:none;">
+        <h2>Cart</h2>
+        <ul id="cartItems" class="cart-items"></ul>
+        <button onclick="goToCart()">Go to Cart</button>
+        <div id="paypal-button-container"></div>
+    </div>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        const cart = [];
+        let currentCourse = null;
+
+        function selectDate(courseId, courseName, price) {
+            currentCourse = {id: courseId, name: courseName, price: price};
+            document.getElementById('catalogue').style.display = 'none';
+            document.getElementById('date-picker').style.display = 'block';
+            flatpickr("#datepicker", {
+                enableTime: false,
+                dateFormat: "Y-m-d",
+                onChange: function(selectedDates, dateStr, instance) {
+                    currentCourse.date = dateStr;
+                }
+            });
+        }
+
+        function confirmDate() {
+            if (currentCourse.date) {
+                cart.push(currentCourse);
+                alert(currentCourse.name + " has been added to the cart for " + currentCourse.date);
+                displayCart();
+                document.getElementById('date-picker').style.display = 'none';
+                document.getElementById('catalogue').style.display = 'block';
+            } else {
+                alert("Please select a date.");
+            }
+        }
+
+        function bookAll() {
+            selectDate('speak-easy', 'Speak-Easy', 695);
+            selectDate('z-speaks', 'Z-Speaks', 695);
+        }
+
+        function displayCart() {
+            const cartItems = document.getElementById('cartItems');
+            cartItems.innerHTML = '';
+            cart.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${item.name} - $${item.price} on ${item.date}`;
+                cartItems.appendChild(listItem);
+            });
+        }
+
+        function goToCart() {
+            document.getElementById('catalogue').style.display = 'none';
+            document.getElementById('cart-page').style.display = 'block';
+            renderPayPalButton();
+        }
+
+        function renderPayPalButton() {
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    // Set up the transaction
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: cart.reduce((total, item) => total + item.price, 0).toString()
+                            }
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    // Capture the funds from the transaction
+                    return actions.order.capture().then(function(details) {
+                        alert('Transaction completed by ' + details.payer.name.given_name);
+                        // Clear the cart
+                        cart.length = 0;
+                        displayCart();
+                    });
+                }
+            }).render('#paypal-button-container'); // Display payment options on your web page
+        }
+    </script>
+</body>
+</html>
